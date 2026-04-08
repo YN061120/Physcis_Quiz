@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Electronics Quiz</title>
+    <style>
+        /* --- CSS Variables & Theme Definitions --- */
+        :root {
+            --bg-color: #f0f4f8;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --card-bg: #ffffff;
+            --primary: #3182ce;
+            --primary-hover: #2b6cb0;
+            --correct-bg: #c6f6d5;
+            --correct-text: #22543d;
+            --correct-border: #48bb78;
+            --incorrect-bg: #fed7d7;
+            --incorrect-text: #742a2a;
+            --incorrect-border: #f56565;
+            --border-color: #e2e8f0;
+            --hover-bg: #ebf8ff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        body.dark-mode {
+            --bg-color: #1a202c;
+            --text-main: #e2e8f0;
+            --text-muted: #a0aec0;
+            --card-bg: #2d3748;
+            --primary: #63b3ed;
+            --primary-hover: #4299e1;
+            --correct-bg: #1c4532;
+            --correct-text: #9ae6b4;
+            --correct-border: #38a169;
+            --incorrect-bg: #63171b;
+            --incorrect-text: #feb2b2;
+            --incorrect-border: #e53e3e;
+            --border-color: #4a5568;
+            --hover-bg: #2a4365;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* --- Base Styles --- */
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* --- Top Controls Bar --- */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e0;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        body.dark-mode .slider { background-color: #4a5568; }
+        body.dark-mode input:checked + .slider { background-color: var(--primary); }
+
+        /* --- Header & Layout --- */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 { color: var(--primary); margin-bottom: 5px; }
+        .header p { color: var(--text-muted); font-size: 1.1rem; }
+
+        /* --- Quiz Cards --- */
+        .question-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .question-card:hover {
+            transform: translateY(-2px);
+        }
+        .question-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        @media (min-width: 600px) {
+            .options-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .option-label:hover:not(.disabled) {
+            border-color: var(--primary);
+            background-color: var(--hover-bg);
+        }
+        .option-label input[type="radio"] {
+            margin-right: 15px;
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        
+        .option-label.selected:not(.disabled) {
+            border-color: var(--primary);
+            background-color: var(--hover-bg);
+        }
+        .option-label.correct {
+            background-color: var(--correct-bg) !important;
+            border-color: var(--correct-border) !important;
+            color: var(--correct-text) !important;
+        }
+        .option-label.incorrect {
+            background-color: var(--incorrect-bg) !important;
+            border-color: var(--incorrect-border) !important;
+            color: var(--incorrect-text) !important;
+        }
+
+        /* --- Buttons --- */
+        .button-container {
+            text-align: center;
+            margin: 40px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        .btn-outline:hover { background-color: var(--hover-bg); }
+
+        /* --- Scoreboard & Receipt --- */
+        #score-board {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            border: 2px solid var(--primary);
+            box-shadow: var(--shadow);
+        }
+        #score-board h2 { margin: 0 0 10px 0; color: var(--primary); font-size: 2rem; }
+
+        #receipt-view { display: none; }
+        .receipt-item {
+            background-color: var(--card-bg);
+            border-left: 5px solid var(--border-color);
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: var(--shadow);
+        }
+        .receipt-item.r-correct { border-left-color: var(--correct-border); }
+        .receipt-item.r-incorrect { border-left-color: var(--incorrect-border); }
+        
+        .r-question { font-weight: bold; margin-bottom: 8px; }
+        .r-answer { display: flex; flex-direction: column; gap: 4px; font-size: 0.95rem; }
+        .r-your-ans { color: var(--text-muted); }
+        .r-correct-ans { color: var(--correct-border); font-weight: 600; }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .bg-green { background-color: var(--correct-bg); color: var(--correct-text); }
+        .bg-red { background-color: var(--incorrect-bg); color: var(--incorrect-text); }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Top Control Bar -->
+        <div class="controls-bar">
+            <div class="control-group">
+                <label class="toggle-container">
+                    <div class="switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider"></span>
+                    </div>
+                    Dark Mode
+                </label>
+            </div>
+            <div class="control-group">
+                <label class="toggle-container" title="Grades the question as soon as you select an answer">
+                    <div class="switch">
+                        <input type="checkbox" id="instant-feedback-toggle">
+                        <span class="slider"></span>
+                    </div>
+                    Instant Feedback
+                </label>
+            </div>
+        </div>
+
+        <!-- MAIN QUIZ VIEW -->
+        <div id="quiz-view">
+            <div class="header">
+                <h1>Electronics & Semiconductors</h1>
+                <p>Questions and options are randomized every time you play.</p>
+            </div>
+
+            <div id="score-board">
+                <h2>Your Score: <span id="score-text">0/0</span></h2>
+                <p id="score-message"></p>
+            </div>
+
+            <form id="quiz-form">
+                <div id="questions-container"></div>
+                <div class="button-container">
+                    <button type="submit" class="btn" id="submit-btn">Submit Answers</button>
+                    <button type="button" class="btn btn-outline" id="receipt-btn" style="display: none;" onclick="showReceipt()">View Answer Receipt</button>
+                    <button type="button" class="btn" id="retry-btn" style="display: none;" onclick="location.reload()">Re-take Quiz</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- RECEIPT VIEW -->
+        <div id="receipt-view">
+            <div class="header">
+                <h1>Answer Receipt</h1>
+                <p>A detailed breakdown of your submission.</p>
+            </div>
+            
+            <div id="receipt-container"></div>
+            
+            <div class="button-container">
+                <button class="btn btn-outline" onclick="window.print()">Print Receipt</button>
+                <button class="btn" onclick="showQuiz()">Back to Summary</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Raw Data (Correct answers marked by index, prefixes removed for clean shuffling)
+        const rawQuizData = [
+            { q: "Electric current in semiconductors is carried by:", opts: ["Only electrons", "Only holes", "Electrons and holes", "Neutrons"], corr: 2 },
+            { q: "In a voltage divider circuit with Vin=12V, R1=2kΩ and R2=1kΩ, the output voltage Vout is:", opts: ["12V", "8V", "4V", "6V"], corr: 2 },
+            { q: "The depletion region is:", opts: ["Region with high charge", "Region with no mobile charge carriers", "Region with many electrons", "Region with metal"], corr: 1 },
+            { q: "A memory cell capacitor has a capacitance of 0.03 pF. If the voltage across it reading a 'one' is 0.5 V, determine the number of electrons to charge it. (e = 1.6 x 10^-19 C)", opts: ["43750", "93750", "921", "3200"], corr: 1 },
+            { q: "Adding phosphorus to silicon creates:", opts: ["P-type semiconductor", "N-type semiconductor", "Insulator", "Conductor"], corr: 1 },
+            { q: "P-type semiconductors have an abundance of:", opts: ["Electrons", "Holes", "Protons", "Neutrons"], corr: 1 },
+            { q: "A 'hole' represents:", opts: ["Extra electron", "Missing electron", "Proton", "Neutron"], corr: 1 },
+            { q: "Forward bias causes the junction to:", opts: ["Block current", "Allow current flow", "Destroy the device", "Increase resistance infinitely"], corr: 1 },
+            { q: "A BZY88C4V7 Zener diode is connected in reverse bias across a load with a supply of 12 V and a series resistor. If the diode is in breakdown, what is the output voltage across the load?", opts: ["12 V", "7.3 V", "4.7 V", "0 V"], corr: 2 },
+            { q: "A FET operates with a drain current of 50 mA at Vgs = -2 V. If it has a transconductance of 25mA/V, and Vgs changes to -2.5 V, what is the new drain current?", opts: ["62.5 mA", "50 mA", "37.5 mA", "25 mA"], corr: 2 },
+            { q: "A transistor is biased such that a very small base current flows, but not enough for saturation. The transistor operates in:", opts: ["Cutoff region", "Saturation region", "Active region", "Breakdown region"], corr: 2 },
+            { q: "In a transistor inverter circuit, if the base is driven HIGH and the transistor enters deep saturation, what is the MOST accurate statement?", opts: ["Output is HIGH due to increased collector current", "Output is LOW because collector voltage collapses", "Output oscillates due to charge storage", "Output remains unchanged"], corr: 1 },
+            { q: "In a CMOS inverter, during the transition when the input voltage is around the threshold region, what happens?", opts: ["Both PMOS and NMOS are OFF", "Only PMOS is ON", "Only NMOS is ON", "Both PMOS and NMOS conduct simultaneously"], corr: 3 },
+            { q: "At the switching threshold of a CMOS inverter, which condition is MOST accurate?", opts: ["PMOS current = 0", "NMOS current = 0", "PMOS current ≈ NMOS current", "Output voltage = 0"], corr: 2 },
+            { q: "Why are CMOS inverters considered the fundamental building block for all digital logic circuits?", opts: ["Because they amplify analog signals", "Because they provide both pull-up and pull-down networks enabling construction of any Boolean function", "Because they reduce resistance", "Because they increase frequency response"], corr: 1 },
+            { q: "What is the main purpose of an active device in electronics?", opts: ["Store energy", "Amplify signals", "Reduce voltage only", "Block current"], corr: 1 },
+            { q: "Which component is considered an active device?", opts: ["Resistor", "Capacitor", "Transistor", "Inductor"], corr: 2 },
+            { q: "A BJT has how many terminals?", opts: ["2", "3", "4", "5"], corr: 1 },
+            { q: "The three terminals of a BJT are:", opts: ["Gate, Drain, Source", "Base, Collector, Emitter", "Anode, Cathode, Gate", "Input, Output, Ground"], corr: 1 },
+            { q: "Which of the following types of BJT exists?", opts: ["NMOS and PMOS", "NPN and PNP", "AC and DC", "Analog and Digital"], corr: 1 },
+            { q: "In a BJT, the base current controls:", opts: ["Voltage only", "Collector current", "Resistance", "Capacitance"], corr: 1 },
+            { q: "A BJT primarily acts as a:", opts: ["Voltage amplifier", "Current amplifier", "Power supply", "Storage device"], corr: 1 },
+            { q: "A FET is controlled by:", opts: ["Current", "Voltage", "Power", "Resistance"], corr: 1 }
+        ];
+
+        let quizState = [];
+        let isSubmitted = false;
+
+        // --- Utility Functions ---
+        // Shuffle array using Fisher-Yates algorithm
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        // Prepare and shuffle data
+        function initializeData() {
+            let formattedData = rawQuizData.map(item => {
+                // Map options to objects tracking correct state before shuffling
+                let optionsObj = item.opts.map((optText, i) => ({
+                    text: optText,
+                    isCorrect: i === item.corr
+                }));
+                return {
+                    question: item.q,
+                    options: shuffle(optionsObj), // Shuffle options
+                    userAnswerIndex: null
+                };
+            });
+            return shuffle(formattedData); // Shuffle questions
+        }
+
+        // --- Render Functions ---
+        function renderQuiz() {
+            quizState = initializeData();
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+            
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+
+            quizState.forEach((q, index) => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                card.id = `qcard-${index}`;
+
+                card.innerHTML = `<div class="question-title">${index + 1}. ${q.question}</div>`;
+                const grid = document.createElement('div');
+                grid.className = 'options-grid';
+
+                q.options.forEach((opt, optIndex) => {
+                    const label = document.createElement('label');
+                    label.className = 'option-label';
+                    label.id = `label-${index}-${optIndex}`;
+
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = `q${index}`;
+                    input.value = optIndex;
+                    input.dataset.correct = opt.isCorrect;
+
+                    // Interaction logic
+                    input.addEventListener('change', () => {
+                        if (isSubmitted) return;
+                        
+                        quizState[index].userAnswerIndex = optIndex;
+                        const allLabels = card.querySelectorAll('.option-label');
+                        allLabels.forEach(l => l.classList.remove('selected'));
+                        label.classList.add('selected');
+
+                        // Instant Feedback feature
+                        if (document.getElementById('instant-feedback-toggle').checked) {
+                            gradeSingleQuestion(index, card, q);
+                        }
+                    });
+
+                    label.appendChild(input);
+                    label.appendChild(document.createTextNode(`${letters[optIndex]}) ${opt.text}`));
+                    grid.appendChild(label);
+                });
+
+                card.appendChild(grid);
+                container.appendChild(card);
+            });
+        }
+
+        // --- Grading Logic ---
+        function gradeSingleQuestion(qIndex, card, qData) {
+            // Disable inputs for this question
+            const inputs = card.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.disabled = true;
+                input.parentElement.classList.add('disabled');
+            });
+
+            // Find correct index
+            const correctIndex = qData.options.findIndex(o => o.isCorrect);
+            const userAns = qData.userAnswerIndex;
+
+            const correctLabel = document.getElementById(`label-${qIndex}-${correctIndex}`);
+            correctLabel.classList.add('correct');
+
+            if (userAns !== correctIndex && userAns !== null) {
+                const wrongLabel = document.getElementById(`label-${qIndex}-${userAns}`);
+                wrongLabel.classList.add('incorrect');
+            }
+        }
+
+        document.getElementById('quiz-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (isSubmitted) return;
+            isSubmitted = true;
+            
+            let score = 0;
+            const total = quizState.length;
+
+            quizState.forEach((q, index) => {
+                const card = document.getElementById(`qcard-${index}`);
+                const correctIndex = q.options.findIndex(o => o.isCorrect);
+                
+                if (q.userAnswerIndex === correctIndex) {
+                    score++;
+                }
+                // Grade visually
+                gradeSingleQuestion(index, card, q);
+            });
+
+            // Show Scoreboard
+            document.getElementById('score-text').innerText = `${score} / ${total}`;
+            const msg = document.getElementById('score-message');
+            const pct = (score / total) * 100;
+            
+            if (pct >= 80) msg.innerText = "Excellent! You have a solid grasp of semiconductors.";
+            else if (pct >= 50) msg.innerText = "Good job! But there's still room for improvement.";
+            else msg.innerText = "Keep studying! Review your electronics notes and try again.";
+
+            document.getElementById('score-board').style.display = 'block';
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('receipt-btn').style.display = 'inline-block';
+            document.getElementById('retry-btn').style.display = 'inline-block';
+
+            // Generate Receipt Content
+            buildReceipt();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // --- Receipt Generation ---
+        function buildReceipt() {
+            const container = document.getElementById('receipt-container');
+            container.innerHTML = '';
+
+            quizState.forEach((q, index) => {
+                const correctOpt = q.options.find(o => o.isCorrect);
+                const userOpt = q.userAnswerIndex !== null ? q.options[q.userAnswerIndex] : null;
+                const isRight = userOpt && userOpt.isCorrect;
+
+                const item = document.createElement('div');
+                item.className = `receipt-item ${isRight ? 'r-correct' : 'r-incorrect'}`;
+
+                item.innerHTML = `
+                    <div class="status-badge ${isRight ? 'bg-green' : 'bg-red'}">
+                        ${isRight ? '✓ Correct' : '✗ Incorrect'}
+                    </div>
+                    <div class="r-question">${index + 1}. ${q.question}</div>
+                    <div class="r-answer">
+                        <span class="r-your-ans">Your Answer: ${userOpt ? userOpt.text : '<i>No answer selected</i>'}</span>
+                        ${!isRight ? `<span class="r-correct-ans">Correct Answer: ${correctOpt.text}</span>` : ''}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // --- View Toggling ---
+        function showReceipt() {
+            document.getElementById('quiz-view').style.display = 'none';
+            document.getElementById('receipt-view').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showQuiz() {
+            document.getElementById('receipt-view').style.display = 'none';
+            document.getElementById('quiz-view').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- Top Controls Event Listeners ---
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        // Load saved theme preference
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeToggle.checked = true;
+        }
+
+        themeToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Initialization
+        renderQuiz();
+    </script>
+</body>
+</html>
